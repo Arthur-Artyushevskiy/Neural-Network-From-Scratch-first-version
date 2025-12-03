@@ -6,46 +6,50 @@
 #include "Layer.hpp"
 class Dense_Layer : public Layer{
 private:
-    // 2D matrix with 1 col and n rows
-    std::vector<std::vector<std::vector<float>>> input;
-    // 2D matrix with z col and n rows
-    std::vector<std::vector<float>> weights;
-    // 2D matrix with 1 col and n rows
-    std::vector<std::vector<float>> biases;
+    
+    vector<vector<vector<float>>> input; // the input batch B x R x 1
+    
+    vector<vector<float>> weights; // the weights matrix R x C
+    
+    vector<vector<float>> biases; // the biases matrix R x 1
     // A matrix for the weight gradient
-    std::vector<std::vector<float>> d_weights;
+    vector<vector<float>> d_weights; // the gradient of weights R x C
     // A matrix for the bias gradient
-    std::vector<std::vector<float>> d_biases;
+    vector<vector<float>> d_biases; // the gradien of biases R x 1
     
-    std::vector<std::vector<double>> m_weights;
+    vector<vector<double>> m_weights; // the mvector (used for ADAM) for weights R x C
     
-    std::vector<std::vector<double>> v_weights;
+    vector<vector<double>> v_weights; // the v vector (used for ADAM) for weights R x C
     
-    std::vector<std::vector<double>> m_biases;
+    vector<vector<double>> m_biases; // the mvector (used for ADAM) for biases R x 1
     
-    std::vector<std::vector<double>> v_biases;
-    // the number of rows for the current matrix from the current layer that is set by the constructor
-    int row;
-    // the number of col for the current matrix from the previous layer is set by the constructor
-    int col;
+    vector<vector<double>> v_biases; // the v vector (used for ADAM) for biases R x 1
     
-    int batch_num;
+    
+    int row; // the number of rows for the current matrix from the current layer that is set by the constructor
+    
+    int col; // the number of col for the current matrix from the previous layer is set by the constructor
+    
+    int batch_num; // the size of the current batch
+    
 public:
    
-    //UPDATE: I will change the old version of the constructor to allow the creation of an empty model. Then I will create a forward pass that will allow the input to be defined through the output of the previous layer
-    // is that the weights and biases matrixes are not printing, basically not initilazing
+   
     Dense_Layer(int input_size,int row){
         this-> row = row;
         col = input_size;
+        
         weights = he_init_weights();
         biases =  he_init_biases();
         d_weights = weights;
         d_biases  = biases;
+        m_weights.resize(row, vector<double>(col, 0.0));
+        v_weights.resize(row, vector<double>(col, 0.0));
+        m_biases.resize(row, vector<double>(1, 0.0));
+        v_biases.resize(row, vector<double>(1, 0.0));
     }
    
     int getRow();
-    
-    float generate_random_float(float min, float max);
     
     // One of the  most important functions that calculates the gradient and adjusts the weights and biases
     vector<vector<vector<float>>> backward(const vector<vector<vector<float>>> & gradient_from_next_layer) override;
@@ -56,8 +60,10 @@ public:
     // this method is important that will go through the model the pass the output of the previous layer to this current layer as an input
     vector<vector<vector<float>>> forward(const  vector<vector<vector<float>>> & output_from_prev_layer) override;
     
+    // saves the weights and biases for the current dense layer object
     void save_to_file(ofstream& file) override;
    
+    // loads the parameters for the current dense layer object
     void load_layer(ifstream& file) override;
     
     
@@ -65,25 +71,23 @@ public:
     
     
     // sets the weight matrix with random numbers
-    std::vector<std::vector<float>> he_init_weights();
+    vector<vector<float>> he_init_weights();
     // sets the bias matrix with random numbers
-    std::vector<std::vector<float>> he_init_biases();
+    vector<vector<float>> he_init_biases();
     // sets the input matrix
-    void set_inputs( std::vector<std::vector<std::vector<float>>> inputs);
+    void set_inputs(vector<vector<vector<float>>> inputs);
     // sets the weights matrix
-    void set_weights( std::vector<std::vector<float>> weights);
+    void set_weights(vector<vector<float>> weights);
     // sets the biases matrix
-    void set_biases( std::vector<std::vector<float>> biases);
-    // returns the input matrix
-    std::vector<std::vector<std::vector<float>>> get_inputs();
+    void set_biases(vector<vector<float>> biases);
     // returns the weights matrix
-    std::vector<std::vector<float>> get_weights() const;
+    vector<vector<float>> get_weights() const;
     // returns the biases matrix
-    std::vector<std::vector<float>> get_biases() const;
+    vector<vector<float>> get_biases() const;
     // returns the prediction using input, weights, and biases matrix
-    std::vector<std::vector<std::vector<float>>> get_prediction() const;
+    vector<vector<vector<float>>> get_prediction() const;
     
-    std::vector<std::vector<std::vector<float>>> getInput();
+    vector<vector<vector<float>>> getInput();
     // A Dummy override method that does nothing for Dense Layer class
     
 };

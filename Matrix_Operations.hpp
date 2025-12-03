@@ -8,7 +8,8 @@ using namespace std;
     
 
 vector<vector<float>> multiply(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B);
-vector<vector<float>> add_bias_vector( vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix);
+vector<vector<float>> add_trasposed_vectors( vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix);
+vector<vector<float>> subtract_trasposed_vectors( vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix);
 vector<vector<float>> element_wise_multiplication(vector<vector<float>> Transposed_Vector, vector<vector<float>> Transposed_Vector_2);
 vector<vector<float>> transpose(vector<vector<float>> input);
 vector<vector<float>> transpose(vector<float>input);

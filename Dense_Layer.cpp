@@ -2,13 +2,8 @@
 #include "Dense_Layer.hpp"
 #include <iostream>
 
-// an old version that I used to assign random values for weights and biases
-float Dense_Layer::generate_random_float(float min, float max) {
-    return min + ((float)rand() / RAND_MAX) * (max - min);
-}
-
 // sets the random weights using the he initialization
-std::vector<std::vector<float>> Dense_Layer::he_init_weights(){
+vector<vector<float>> Dense_Layer::he_init_weights(){
     vector<vector<float>> weights(row, vector<float>(col, 0));
     // creates a standart deviation for the normal distribution to create random weights
     double stddev = sqrt(2.0 / (double)col);
@@ -26,9 +21,9 @@ std::vector<std::vector<float>> Dense_Layer::he_init_weights(){
 }
 
 // sets the random biases using the he initialization
-std::vector<std::vector<float>> Dense_Layer::he_init_biases(){
-    std::vector<std::vector<float>> biases(row, vector<float>(1, 0));
-    double stddev = sqrt(2.0 / (double)col);
+vector<vector<float>> Dense_Layer::he_init_biases(){
+    vector<vector<float>> biases(row, vector<float>(1, 0));
+    double stddev = sqrt(2.0 / (double) col);
     
     random_device rd;
     mt19937 gen(rd());
@@ -40,47 +35,45 @@ std::vector<std::vector<float>> Dense_Layer::he_init_biases(){
         }
     }
     return biases;
-    //return std::vector<std::vector<float>>(row, std::vector<float>(1, 0.0f));
 }
 
-void Dense_Layer::set_inputs( std::vector<std::vector<std::vector<float>>>inputs){
+void Dense_Layer::set_inputs(vector<vector<vector<float>>>inputs){
     this->input = inputs;
 }
 
-void Dense_Layer::set_weights( std::vector<std::vector<float>> weights){
+void Dense_Layer::set_weights(vector<vector<float>> weights){
     this->weights = weights;
 }
 
-void Dense_Layer::set_biases( std::vector<std::vector<float>> biases){
+void Dense_Layer::set_biases(vector<vector<float>> biases){
     this->biases = biases;
 }
 
-std::vector<std::vector<std::vector<float>>> Dense_Layer::get_inputs(){
-    return input;
-}
 
-std::vector<std::vector<float>> Dense_Layer::get_weights() const {
+
+vector<vector<float>> Dense_Layer::get_weights() const {
     return weights;
 }
 
-std::vector<std::vector<float>> Dense_Layer::get_biases() const {
+vector<vector<float>> Dense_Layer::get_biases() const {
     return biases;
 }
 
 vector<vector<vector<float>>> Dense_Layer::get_prediction() const{
-    std::vector<std::vector<std::vector<float>>> output;
+    vector<vector<vector<float>>> output;
     for(int depth{0}; depth < input.size(); depth++){
-        output.push_back(add_bias_vector(multiply(weights, input[depth]), biases));
+        output.push_back(add_trasposed_vectors(multiply(weights, input[depth]), biases));
     }
     return output;
 }
 
-vector<vector<vector<float>>>  Dense_Layer::getInput(){
+vector<vector<vector<float>>> Dense_Layer::getInput(){
     return input;
 }
 // there is an error where the gradient from the next layer does not change and stays the same initial gradient
 vector<vector<vector<float>>> Dense_Layer::backward(const vector<vector<vector<float>>> & gradient_from_next_layer){
-    vector<vector<vector<float>>> batch_d_weights(input.size(), vector<vector<float>>(d_weights.size(),vector<float>(d_weights[0].size(), 0)));
+    
+    vector<vector<vector<float>>>batch_d_weights(input.size(),vector<vector<float>>(d_weights.size(),vector<float>(d_weights[0].size(), 0)));
     
     vector<vector<vector<float>>> batch_d_biases(input.size(), vector<vector<float>>(d_biases.size(),vector<float>(1, 0)));
     vector<vector<vector<float>>> gradient_for_prev_layer = gradient_from_next_layer;
@@ -140,20 +133,13 @@ void Dense_Layer::update(float learning_rate,string OptimizationAlgorithm){
     if(OptimizationAlgorithm == "ADAM"){
         static int t = 0;
         
-        double epsilon = 1e-8;
+        const double epsilon = 1e-9;
         double beta1 = 0.9;
         double beta2 = 0.999;
         double mVector;
         double vVector;
+        
         t++;
-        
-        if(m_weights.size() != weights.size()) {
-                     m_weights.resize(weights.size(), vector<double>(weights[0].size(), 0.0));
-                     v_weights.resize(weights.size(), vector<double>(weights[0].size(), 0.0));
-                     m_biases.resize(biases.size(), vector<double>(1, 0.0));
-                     v_biases.resize(biases.size(), vector<double>(1, 0.0));
-                }
-        
        
         for(int row{0}; row < weights.size(); row++){
            

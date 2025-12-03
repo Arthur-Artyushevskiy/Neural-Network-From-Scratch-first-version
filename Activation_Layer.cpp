@@ -1,10 +1,11 @@
 #include "Activation_Layer.hpp"
 #include <iostream>
+
 float Activation_Layer::Sigmoid(float input){
     return 1/(1+ pow(2.71828182845904523,input));
 }
 
- vector<vector<vector<float>>> Activation_Layer::ReLu(float k){
+vector<vector<vector<float>>> Activation_Layer::ReLu(float k){
     for(int depth{0}; depth < input.size(); depth++){
         for(int row{0}; row < input[0].size(); row++){
             if(input[depth][row][0] < 0){

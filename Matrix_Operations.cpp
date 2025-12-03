@@ -4,13 +4,13 @@
 using namespace std;
 // This method multiplies two matrices based on certain rule
 vector<vector<float>> multiply(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B){
-        int A_rows = matrix_A.size();
+        size_t A_rows = matrix_A.size();
         
-        int A_cols = matrix_A[0].size();
+        size_t A_cols = matrix_A[0].size();
         
-        int B_rows = matrix_B.size();
+        size_t B_rows = matrix_B.size();
         
-        int B_cols = matrix_B[0].size();
+        size_t B_cols = matrix_B[0].size();
    
     // this is the rule
     if (A_cols != B_rows) {
@@ -34,7 +34,7 @@ vector<vector<float>> multiply(const vector<vector<float>>& matrix_A, const vect
     return result;
 }
 // this method adds a bias vector because it is designed for only n*1 matrix
-vector<vector<float>>add_bias_vector(vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix){
+vector<vector<float>>add_trasposed_vectors(vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix){
     long num_row_vector = Transposed_Vector.size();
     long num_row_matrix = TwoDMatrix.size();
     long num_col_matrix = TwoDMatrix[0].size();
@@ -53,11 +53,33 @@ vector<vector<float>>add_bias_vector(vector<vector<float>> Transposed_Vector, ve
     }
     return result;
 }
+
+vector<vector<float>> subtract_trasposed_vectors( vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix){
+    long num_row_vector = Transposed_Vector.size();
+    long num_row_matrix = TwoDMatrix.size();
+    long num_col_matrix = TwoDMatrix[0].size();
+    
+    if(num_row_vector != num_row_matrix){
+        cout << "ERROR: the number of rows in your vector and matrix are not equal!" << endl;
+        return Transposed_Vector;
+    }
+    vector<vector<float>> result(num_row_matrix, vector<float>(num_col_matrix, 0));
+    
+    for(int row{0}; row < num_row_matrix ; row++){
+
+        for(int col{0}; col < num_col_matrix; col++){
+            result[row][col] = TwoDMatrix[row][col] - Transposed_Vector[row][0];
+        }
+    }
+    return result;
+
+}
+
 // an element_wise_multiplication that I didn't use because of simplifications in the back propagation process
 vector<vector<float>> element_wise_multiplication(vector<vector<float>> Transposed_Vector, vector<vector<float>> Transposed_Vector_2){
-    int num_row_vector_1 = Transposed_Vector.size();
+    size_t num_row_vector_1 = Transposed_Vector.size();
     
-    int num_row_vector_2 = Transposed_Vector_2.size();
+    size_t num_row_vector_2 = Transposed_Vector_2.size();
    
     if(num_row_vector_1 != num_row_vector_2){
         cout << "ERROR: the number of rows in your first vector and second vector are not equal!" << endl;

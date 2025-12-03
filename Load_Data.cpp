@@ -1,8 +1,6 @@
 
 #include "Load_Data.hpp"
 
-
-
 MNISTData load_data(string filename){
     MNISTData data;
     string line;

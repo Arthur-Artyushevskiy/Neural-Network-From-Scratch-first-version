@@ -5,6 +5,8 @@ void NeuralNetwork::addDense(int numNeurons){
 }
 */
 
+
+
 // this method creates a neural network with the initial number of neurons
 vector<unique_ptr<Layer>> NeuralNetwork::createModel(int input_size, int num, int finalNum, int k_factor ){
     vector<unique_ptr<Layer>> model;
@@ -15,11 +17,13 @@ vector<unique_ptr<Layer>> NeuralNetwork::createModel(int input_size, int num, in
     }
    
     model.push_back(make_unique<Dense_Layer>(input_size, num_of_neurons[0]));//0
+    model.push_back(make_unique<BatchNorm>(num_of_neurons[0]));
     model.push_back(make_unique<Activation_Layer>("leak_relu")); //1
     for(int i{1}; i < num_of_neurons.size(); i++){
         
         int prev_layer_size = num_of_neurons[i-1];
         model.push_back(make_unique<Dense_Layer>(prev_layer_size, num_of_neurons[i])); // 2
+        model.push_back(make_unique<BatchNorm>(num_of_neurons[i]));
         model.push_back(make_unique<Activation_Layer>("leak_relu")); // 3
         
         
@@ -28,6 +32,18 @@ vector<unique_ptr<Layer>> NeuralNetwork::createModel(int input_size, int num, in
     model.push_back(make_unique<Dense_Layer>(prev_layer_size, finalNum)); // 8
     model.push_back(make_unique<Activation_Layer>("softmax"));//9
     return model;
+}
+
+void NeuralNetwork::addDense(int numNeuronsInput, int numNeuronsOuput){
+    model.push_back(make_unique<Dense_Layer>(numNeuronsInput, numNeuronsOuput));//0
+}
+
+void NeuralNetwork::addBatchNorm(int numNeurons){
+    model.push_back(make_unique<BatchNorm>(numNeurons));
+}
+
+void NeuralNetwork::addActivation(string activation_function){
+    model.push_back(make_unique<Activation_Layer>(activation_function));
 }
 
 // A method that allows to train the model

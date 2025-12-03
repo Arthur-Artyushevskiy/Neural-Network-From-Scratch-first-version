@@ -8,6 +8,7 @@
 #include "Activation_Layer.hpp"
 #include "Matrix_Operations.hpp"
 #include "LossFunctions.hpp"
+#include "BatchNorm.hpp"
 using namespace std;
 
 class NeuralNetwork{
@@ -16,13 +17,17 @@ private:
     string OptimizationAlgorithm;
 public:
     
-    NeuralNetwork(int input_size, int FirstNumOfNeurons, int finalNumOfNeurons, int k_factor, string algorithm){
-        model = createModel(input_size, FirstNumOfNeurons, finalNumOfNeurons, k_factor);
+    NeuralNetwork(int input_size, int FirstNumOfNeurons, int finalNumOfNeurons, int k_factor, string algorithm, bool autoCreate){
+        
+        if(autoCreate) model = createModel(input_size, FirstNumOfNeurons, finalNumOfNeurons, k_factor);
         OptimizationAlgorithm = algorithm;
     }
     
-    void addDense(int numNeurons);
+    void addDense(int numNeuronsInput, int numNeuronsOuput);
     
+    void addBatchNorm(int numNeurons);
+    
+    void addActivation(string activation_function);
     
     vector<unique_ptr<Layer>> createModel(int input_size, int num, int finalNum, int k_factor);
     
@@ -30,7 +35,7 @@ public:
         
     vector<vector<vector<float>>> forward_pass(vector<vector<vector<float>>> images);
         
-    pair<double, double> start_batch_training ( vector<vector<vector<float>>> batch_images, vector<vector<int>>batch_one_hot_labels);
+    pair<double, double> start_batch_training(vector<vector<vector<float>>> batch_images, vector<vector<int>>batch_one_hot_labels);
        
     void start_training(MNISTData& train, int numberOfImages);
 
