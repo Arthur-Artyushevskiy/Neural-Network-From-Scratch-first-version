@@ -29,48 +29,6 @@ vector<vector<float>> Dense_Layer::backward(const vector<vector<float>> & gradie
     
     vector<vector<float>> weights_T = transpose(weights);
     return multiply(gradient_from_next_layer, weights_T);
-     /*
-    vector<vector<vector<float>>>batch_d_weights(input.size(),vector<vector<float>>(d_weights.size(),vector<float>(d_weights[0].size(), 0)));
-    
-    vector<vector<float>> batch_d_biases(input.size(), vector<float>(d_biases.size(), 0));
-    vector<vector<float>> gradient_for_prev_layer = gradient_from_next_layer;
-   
-    for(int row{0}; row < input.size(); row++){
-        vector<vector<float>> transposed_input = transpose(input[row]);
-        // finds the gradient for weights knowing the transposed values from the next activation layer and multiplies with the gradient from the next layer. Important to remember that transposed_input is a n*1 matrix and gradient from next layer is also a n*1 matrix, because my multiply methods can only use a n*1 vector as a first parameter and a 2d  matrix as a second one. If not used carefully, this could lead to errors
-        batch_d_weights[row] = multiply(transposed_input, gradient_from_next_layer);
-        // creates a new gradient for the previous layer
-        // creates a copy of weights and transposes it
-        vector<vector<float>> transposed_weights = transpose(weights);
-        // finds the gradient for the previous layer using a n*1 gradient matric and a 2D transposed weight matrix
-        gradient_for_prev_layer = multiply(transposed_weights, gradient_from_next_layer);
-    }
-    batch_d_biases = gradient_from_next_layer;
-   
-    double sum{0.0};
-    for(int row{0}; row < batch_d_weights[0].size(); row++){
-        for(int col{0}; col < batch_d_weights[0][0].size(); col++){
-            sum = 0.0;
-            for(int depth{0}; depth < batch_d_weights.size(); depth++){
-                sum += batch_d_weights[depth][row][col];
-            }
-            d_weights[row][col] = sum / (double) batch_d_weights.size();
-        }
-        
-    }
-    
-    for(int row{0}; row < batch_d_biases[0].size(); row++){
-            sum = 0.0;
-            for(int depth{0}; depth < batch_d_biases.size(); depth++){
-                sum += batch_d_biases[depth][row][0];
-            }
-            d_biases[row] = sum / (double) batch_d_biases.size();
-        }
-        
-    
-    
-    return gradient_for_prev_layer;
-    */
 }
 
 void Dense_Layer::SGD(float learning_rate){
