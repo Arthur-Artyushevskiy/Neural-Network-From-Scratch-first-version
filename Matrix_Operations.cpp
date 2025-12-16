@@ -4,6 +4,9 @@
 using namespace std;
 // This method multiplies two matrices based on certain rule
 vector<vector<float>> multiply(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B){
+    if(matrix_A.empty() || matrix_B.empty()) return{};
+    
+    
         size_t A_rows = matrix_A.size();
         
         size_t A_cols = matrix_A[0].size();
@@ -21,107 +24,147 @@ vector<vector<float>> multiply(const vector<vector<float>>& matrix_A, const vect
     
     // the mulitplication portion
     vector<vector<float>> result(A_rows, vector<float>(B_cols, 0.0f));
-    for (int rowA = 0; rowA < A_rows;rowA++) {
-            for (int colB = 0; colB < B_cols; colB++) {
+    // need to learn more on how the math works for cache effiecincy
+    vector<vector<float>> B_T(B_cols, vector<float>(B_rows));
+    for(size_t B_row{0}; B_row < B_rows; B_row++){
+        for(size_t B_col{0}; B_col < B_cols; B_col++){
+            B_T[B_col][B_row] = matrix_B[B_row][B_col];
+        }
+    }
+    
+    
+    for (size_t rowA{0}; rowA < A_rows; rowA++) {
+        for (size_t colB{0}; colB < B_cols; colB++) {
                 float sum = 0.0f;
-                
-                for (int k = 0; k < A_cols; ++k) { // Loop over cols of A / rows of B
-                    sum += matrix_A[rowA][k] * matrix_B[k][colB];
+                for (size_t k{0}; k < A_cols; ++k) { // Loop over cols of A / rows of B
+                    sum += matrix_A[rowA][k] * B_T[colB][k];
                 }
                 result[rowA][colB] = sum;
             }
         }
     return result;
 }
-// this method adds a bias vector because it is designed for only n*1 matrix
-vector<vector<float>>add_trasposed_vectors(vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix){
-    long num_row_vector = Transposed_Vector.size();
-    long num_row_matrix = TwoDMatrix.size();
-    long num_col_matrix = TwoDMatrix[0].size();
-    
-    if(num_row_vector != num_row_matrix){
-        cout << "ERROR: the number of rows in your vector and matrix are not equal!" << endl;
-        return Transposed_Vector;
-    }
-    vector<vector<float>> result(num_row_matrix, vector<float>(num_col_matrix, 0));
-    
-    for(int row{0}; row < num_row_matrix ; row++){
 
-        for(int col{0}; col < num_col_matrix; col++){
-            result[row][col] = TwoDMatrix[row][col] + Transposed_Vector[row][0];
+
+
+// this method adds a bias vector because it is designed for only n*1 matrix
+vector<vector<float>> add_bias_to_batch(const vector<vector<float>>& matrix, const vector<float>& bias){
+    if (matrix.empty()) return {};
+    size_t rows = matrix.size();
+    size_t cols = matrix[0].size();
+    
+    if(bias.size() != cols){
+        cerr << "Error: Bias size (" << bias.size() << ") must match matrix columns (" << cols << ")" << endl;
+        return matrix;
+    }
+    
+    
+    vector<vector<float>> result = matrix;
+    
+    for(size_t row{0}; row < rows ; row++){
+      for(size_t col{0}; col < cols; col++){
+          result[row][col] += bias[col];
         }
     }
     return result;
 }
 
-vector<vector<float>> subtract_trasposed_vectors( vector<vector<float>> Transposed_Vector, vector<vector<float>> TwoDMatrix){
-    long num_row_vector = Transposed_Vector.size();
-    long num_row_matrix = TwoDMatrix.size();
-    long num_col_matrix = TwoDMatrix[0].size();
+vector<float> sum_dim0(const vector<vector<float>>& matrix) {
+    if (matrix.empty()) return {};
+    size_t rows = matrix.size();
+    size_t cols = matrix[0].size();
     
-    if(num_row_vector != num_row_matrix){
-        cout << "ERROR: the number of rows in your vector and matrix are not equal!" << endl;
-        return Transposed_Vector;
-    }
-    vector<vector<float>> result(num_row_matrix, vector<float>(num_col_matrix, 0));
+    vector<float> sums(cols, 0.0f);
     
-    for(int row{0}; row < num_row_matrix ; row++){
-
-        for(int col{0}; col < num_col_matrix; col++){
-            result[row][col] = TwoDMatrix[row][col] - Transposed_Vector[row][0];
+    for (size_t row{0}; row < rows; row++) {
+        for (size_t col{0}; col < cols; col++) {
+            sums[col] += matrix[row][col];
         }
     }
-    return result;
+    return sums;
+}
 
+vector<vector<float>> subtract_matrices(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B) {
+    size_t rows = matrix_A.size();
+    size_t cols = matrix_A[0].size();
+    
+    if(rows != matrix_B.size() || cols != matrix_B[0].size()){
+        cout << "ERROR: the number of rows in your first vector and second vector are not equal!" << endl;
+        return matrix_A;
+    }
+    
+    vector<vector<float>> result(rows, vector<float>(cols));
+    for(size_t row{0}; row<rows; row++)
+        for(size_t col{0}; col<cols; col++)
+            result[row][col] = matrix_A[row][col] - matrix_B[row][col];
+    return result;
 }
 
 // an element_wise_multiplication that I didn't use because of simplifications in the back propagation process
-vector<vector<float>> element_wise_multiplication(vector<vector<float>> Transposed_Vector, vector<vector<float>> Transposed_Vector_2){
-    size_t num_row_vector_1 = Transposed_Vector.size();
-    
-    size_t num_row_vector_2 = Transposed_Vector_2.size();
-   
-    if(num_row_vector_1 != num_row_vector_2){
+vector<vector<float>> element_wise_multiplication(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B){
+    size_t rows = matrix_A.size();
+    size_t cols = matrix_A[0].size();
+
+    if(rows != matrix_B.size() || cols != matrix_B[0].size()){
         cout << "ERROR: the number of rows in your first vector and second vector are not equal!" << endl;
-        return Transposed_Vector;
+        return matrix_A;
     }
     
-    vector<vector<float>> result(num_row_vector_1, vector<float>(1, 0));
+
+    vector<vector<float>> result(rows, vector<float>(cols, 0));
     
-    for(int row{0}; row < num_row_vector_1 ; row++){
-        result[row][0] = Transposed_Vector[row][0] * Transposed_Vector_2[row][0];
-        
+    for(size_t row{0}; row < rows ; row++){
+        for(size_t col{0}; col < cols; col++){
+            result[row][col] = matrix_A[row][col] * matrix_B[row][col];
+        }
     }
     return result;
 }
-// switches the dimension of a 2D matrix
-vector<vector<float>> transpose(vector<vector<float>> input){
-    vector<vector<float>> output(input[0].size(), vector<float>(input.size(), 0));
-    for(int row{0}; row < output.size() ; row++){
-        for(int col{0}; col < output[0].size(); col++){
-            output[row][col] = input[col][row];
+
+vector<vector<float>> add_matrices(const vector<vector<float>>& matrix_A, const vector<vector<float>>& matrix_B) {
+    size_t rows = matrix_A.size();
+    size_t cols = matrix_A[0].size();
+    
+    if(rows != matrix_B.size() || cols != matrix_B[0].size()){
+        cout << "ERROR: the number of rows in your first vector and second vector are not equal!" << endl;
+        return matrix_A;
+    }
+    
+    vector<vector<float>> result(rows, vector<float>(cols));
+    for(size_t row{0}; row<rows; row++)
+        for(size_t col{0}; col<cols; col++)
+            result[row][col] = matrix_A[row][col] + matrix_B[row][col];
+    return result;
+}
+
+vector<vector<float>> scalar_multiply(const vector<vector<float>>& matrix, float scalar) {
+    vector<vector<float>> result = matrix;
+    for(auto& row : result) {
+        for(auto& val : row) val *= scalar;
+    }
+    return result;
+}
+
+vector<vector<float>> transpose(vector<vector<float>>& input){
+    if(input.empty()) return{};
+    size_t rows = input.size();
+    size_t cols = input[0].size();
+    vector<vector<float>> output(cols, vector<float>(rows, 0));
+    for(size_t row{0}; row < rows ; row++){
+        for(size_t col{0}; col < cols; col++){
+            output[col][row] = input[row][col];
         }
     }
     return output;
 }
-// switches the dimensions of a vector
-vector<vector<float>> transpose(vector<float>input){
+
+vector<vector<float>> transpose(vector<float>& input){
+    if(input.empty()) return{};
+    size_t rows = input.size();
     vector<vector<float>> output(input.size(), vector<float>(1, 0));
-    for(int row{0}; row < output.size(); row++){
-        output[row][0] = input[row];
+    for(size_t row{0}; row < rows; row++){
+        output[0][row] = input[row];
         
     }
     return output;
-}
-// prints out a 2D matrix 
-const void print_matrix(vector<vector<float>> matrix){
-    int count = 0;
-    for(vector<float> row : matrix){
-        for(float num : row){
-            cout << count <<": "<<num << ", ";
-            count++;
-        }
-        cout << endl;
-    }
-    cout << endl;
 }

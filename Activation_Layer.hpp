@@ -8,13 +8,18 @@ using namespace std;
 class Activation_Layer : public Layer{
 private:
     
-    vector<vector<vector<float>>> input; // the input batch for the current layer
+    vector<vector<float>> input; // the input batch for the current layer
     
-    vector<vector<vector<float>>> output; // the output batch that is returned as a prediction
+    vector<vector<float>> output; // the output batch that is returned as a prediction
 
-    vector<vector<vector<float>>> input_copy; // takes the copy of the input batch
+    vector<vector<float>> input_copy; // takes the copy of the input batch
     
     string activation_function; // decides which activation function to use for this Activatoin Layer
+    size_t batch_size;
+    
+    size_t features;
+    
+    double k_factor;
 
 public:
     
@@ -30,17 +35,17 @@ public:
     vector<float> SoftMaxSum();
     
     // the ReLu method for the whole matrix
-    vector<vector<vector<float>>> ReLu(float k);
+    vector<vector<float>> ReLu(float k);
     
     // the Sigmoid method for the whole matrix
-    vector<vector<vector<float>>> Sigmoid();
+    vector<vector<float>> Sigmoid();
     
     // the SoftMax method for the whole matrix
-    vector<vector<vector<float>>> SoftMax();
+    vector<vector<float>> SoftMax();
     
-    vector<vector<vector<float>>> backward(const  vector<vector<vector<float>>> & gradient_from_next_layer) override;
+   vector<vector<float>> backward(const  vector<vector<float>> & gradient_from_next_layer) override;
     
-    vector<vector<vector<float>>> forward(const  vector<vector<vector<float>>> & output_from_prev_layer) override;
+   vector<vector<float>> forward(const  vector<vector<float>> & output_from_prev_layer) override;
     
     void save_to_file(ofstream& file) override;
     
@@ -52,15 +57,12 @@ public:
     
     float Sigmoid_Prime(float input);
     
-    // the gradient of the ReLu function
-    float ReLu_Prime(float input, float k);
+   
     
     // a dummy method for this class
     void update(float learning_rate,string OptimizationAlgorithm) override;
     
-    vector<vector<vector<float>>> get_output();
     
-    vector<vector<vector<float>>> getInput();
 };
 #endif /* Activation_Layer_hpp */
 

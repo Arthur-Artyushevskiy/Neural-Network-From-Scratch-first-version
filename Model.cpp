@@ -47,30 +47,30 @@ void NeuralNetwork::addActivation(string activation_function){
 }
 
 // A method that allows to train the model
-void  NeuralNetwork::back_propagation(vector<vector<int>> one_hot_labels, float learning_rate, vector<vector<vector<float>>> output){
-   
+void  NeuralNetwork::back_propagation(vector<vector<int>> one_hot_labels, float learning_rate, vector<vector<float>>& output){
+    size_t batch_size= output.size();
         // takes the prediction after going through the softmax function
-    vector<vector<vector<float>>> prediction = output;
+    vector<vector<float>> prediction = output;
         // starts the gradient chain by calculating the gradient of the loss function and softmax
-    vector<vector<vector<float>>> gradient_chain;
+    vector<vector<float>> gradient_chain;
     // takes each image and calcualtes the initial gradient for the model
-    for(int depth{0}; depth < prediction.size(); depth++){
-       gradient_chain.push_back(get_loss_gradient(one_hot_labels[depth], prediction[depth]));
+    for(size_t row{0}; row < batch_size; row++){
+       gradient_chain.push_back(get_loss_gradient(one_hot_labels[row], prediction[row]));
     }
     // does a backward step for each layer and updates the parameters of the model
-    for(int i = model.size()-2; i >= 0; i--){
+    for(int i = model.size()-1; i >= 0; i--){
         gradient_chain = model[i]->backward(gradient_chain);
     }
     
     // updates the parameters
-    for(int i{0}; i < model.size(); i++){
+    for(size_t i{0}; i < model.size(); i++){
         model[i]->update(learning_rate, OptimizationAlgorithm);
     }
 }
 
 // this method is designed to traverse through the model to get the prediction and pass it to the back_propagation method
-vector<vector<vector<float>>>  NeuralNetwork::forward_pass(vector<vector<vector<float>>> images ){
-    vector<vector<vector<float>>> current_output = images;
+vector<vector<float>>  NeuralNetwork::forward_pass(vector<vector<float>>& images ){
+    vector<vector<float>> current_output = images;
    for(int layer{0}; layer < model.size(); layer++){
             current_output = model[layer]->forward(current_output);
         }
@@ -78,8 +78,8 @@ vector<vector<vector<float>>>  NeuralNetwork::forward_pass(vector<vector<vector<
 }
 
 // this method is designed to start the btach training by taking a btach of a certain size
-pair<double, double>  NeuralNetwork::start_batch_training (vector<vector<vector<float>>> batch_images, vector<vector<int>>batch_one_hot_labels){
-    vector<vector<vector<float>>> output;
+pair<double, double>  NeuralNetwork::start_batch_training (vector<vector<float>>& batch_images, vector<vector<int>>& batch_one_hot_labels){
+    vector<vector<float>> output;
     // just to be safe to prevent possible error that could happen
     if(batch_images.size() != batch_one_hot_labels.size()){
         //cout << "ERROR: The size of your images batch is not equal to the size of the batch of labels!!!";
@@ -108,7 +108,7 @@ pair<double, double>  NeuralNetwork::start_batch_training (vector<vector<vector<
 }
 
 void NeuralNetwork::start_training(MNISTData& train, int numberOfImages){
-    vector<vector<vector<float>>> batch_images;
+    vector<vector<float>> batch_images;
     vector<vector<int>>batch_one_hot_labels;
     pair<double, double> performance;
     double total_loss{0.0};
@@ -147,7 +147,7 @@ void NeuralNetwork::start_training(MNISTData& train, int numberOfImages){
             int batch_end = min(batch_start + batch_size, batch_limit);
 
             for(int ind = batch_start; ind < batch_end; ind++){
-                 batch_images.push_back(transpose(train.images[ind]));
+                 batch_images.push_back(train.images[ind]);
                  batch_one_hot_labels.push_back(train.one_hot_labels[ind]);
             }
 
@@ -249,18 +249,18 @@ double  NeuralNetwork::evaluate_model(MNISTData& train, int batch_size){
     int size = train.images.size(); // Use actual size of training data passed
     if (size == 0) return 0.0;
 
-    vector<vector<vector<float>>> batch_images;
+   vector<vector<float>> batch_images;
     // vector<vector<int>> batch_one_hot_labels; // Not strictly needed if you just use train.one_hot_labels directly by index, but cleaner to keep consistent with training
     
     for(int batch_start = 0; batch_start < size; batch_start += batch_size){
         int batch_end = min(batch_start + batch_size, size);
         
         for(int ind = batch_start; ind < batch_end; ind++){
-            batch_images.push_back(transpose(train.images[ind]));
+            batch_images.push_back(train.images[ind]);
             // batch_one_hot_labels.push_back(train.one_hot_labels[ind]);
         }
         
-        vector<vector<vector<float>>> current_output = forward_pass(batch_images);
+        vector<vector<float>> current_output = forward_pass(batch_images);
         
         for(int depth{0}; depth < current_output.size(); depth++){
             int predicted_label = get_predicted_label(current_output[depth]);

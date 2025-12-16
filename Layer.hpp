@@ -15,12 +15,14 @@ public:
     
     virtual ~Layer()= default;
     
-    virtual vector<vector<vector<float>>> backward(const vector<vector<vector<float>>> & gradient_from_next_layer) = 0;
+    virtual vector<vector<float>> backward(const vector<vector<float>> & gradient_from_next_layer) = 0;
     
+    
+    
+    virtual vector<vector<float>> forward(const vector<vector<float>> & output_from_prev_layer) = 0;
+ 
     virtual void update(float learning_rate,string OptimizationAlgorithm) = 0;
     
-    virtual vector<vector<vector<float>>> forward(const vector<vector<vector<float>>> & output_from_prev_layer) = 0;
- 
     virtual void save_to_file(ofstream& file) = 0;
     
     virtual void load_layer(std::ifstream& file) = 0;

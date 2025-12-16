@@ -2,74 +2,74 @@
 #include "BatchNorm.hpp"
 
 void BatchNorm::calculate_batch_mean(){
-    batch_means.resize(rowSize, vector<float>(colSize, 0.0f));
-    float sum{0.0f};
-    for(int row{0}; row < rowSize; row++){
-        sum = 0.0f;
-        for(int depth{0}; depth < depthSize; depth++){
-            sum+= input[depth][row][0];
+    batch_means.resize(num_features, 0.0f);
+    
+    for(size_t row{0}; row < batch_size; row++){
+        for(size_t col{0}; col <num_features ; col++){
+            batch_means[col] += input[row][col];
         }
-        batch_means[row][0] = sum / (float) depthSize;
     }
-    //int row{0}; row < rowSize; row++
+    
+    for(size_t col{0}; col <num_features ; col++){
+        batch_means[col] /= (float) batch_size;
+    }
+    //int row{0}; row < rowSize; row++ size_t col{0}; col <num_features ; col++
     //cout << "Batch Mean Calculated: " << endl;
     //print_matrix(batch_means);
 }
 
 void BatchNorm::calculate_batch_var(){
-    batch_vars.resize(rowSize, vector<float>(colSize, 0.0f));
+    batch_vars.resize(num_features, 0.0f);
     float sum{0.0f};
-    for(int row{0}; row < rowSize; row++){
+    for(size_t row{0}; row < batch_size; row++){
         sum = 0.0f;
-        float current_mean = batch_means[row][0];
-        for(int depth{0}; depth < depthSize; depth++){
-            sum+= pow(input[depth][row][0] - current_mean, 2);
+        for(size_t col{0}; col <num_features ; col++){
+            batch_vars[col] += pow(input[row][col] - batch_means[col], 2);
             
         }
-        batch_vars[row][0] = sum / (float) depthSize;
     }
-    
+    for(size_t col{0}; col <num_features ; col++){
+        batch_vars[col] /= (float) batch_size;
+    }
    
     //cout << "Batch Variance Calculated: " << endl;
     //print_matrix(batch_vars);
 }
                                       
 void BatchNorm::calculate_norm_input(){
-   
-    for(int depth{0}; depth < depthSize; depth++){
-        for(int row{0}; row < rowSize; row++){
-            float current_mean = batch_means[row][0];
-            float current_var = batch_vars[row][0];
-            normalized_input[depth][row][0] = (input[depth][row][0] - current_mean) / (pow(current_var + epsilon, 0.5));
+    normalized_input.resize(batch_size, vector<float>(num_features));
+    for(size_t col{0}; col <num_features ; col++){
+        float std_dev = pow(batch_vars[col] + epsilon, 0.5);
+        for(size_t row{0}; row < batch_size; row++){
+            normalized_input[row][col] = (input[row][col] - batch_means[col]) / std_dev;
             
         }
     }
 }
 
 void BatchNorm::calculate_output(){
-    for(int depth{0}; depth < depthSize; depth++){
-        vector<vector<float>> temp_result(rowSize, vector<float>(1, 0));
-        temp_result = element_wise_multiplication(gamma, normalized_input[depth]);
-        temp_result = add_trasposed_vectors(beta, temp_result);
-        output[depth] = temp_result;
+    output.resize(batch_size, vector<float>(num_features));
+    
+    for(size_t row{0}; row < batch_size; row++){
+        for(size_t col{0}; col <num_features ; col++){
+            output[row][col] = (gamma[col] * normalized_input[row][col]) + beta[col];
         }
+    }
+    
+        
 }
 
-vector<vector<vector<float>>> BatchNorm::forward(const std::vector<std::vector<std::vector<float>>> & output_from_prev_layer){
-    if(rowSize != output_from_prev_layer[0].size()){
+vector<vector<float>> BatchNorm::forward(const std::vector<std::vector<float>> & output_from_prev_layer){
+    if(output_from_prev_layer.empty()) return {};
+    
+    if(num_features != output_from_prev_layer[0].size()){
         cerr << "ERROR: The number of rows in the BatchNorm object is not the same to input_tensor!" << endl;
         return output_from_prev_layer;
     }
     
-    
-    
-    depthSize = output_from_prev_layer.size();
+    batch_size = output_from_prev_layer.size();
     
     input = output_from_prev_layer;
-    
-    normalized_input.resize(depthSize, vector<vector<float>>(rowSize, vector<float>(colSize, 0.0f)));
-    
-    output.resize(depthSize, vector<vector<float>>(rowSize, vector<float>(colSize, 0.0f)));
     
     //cout << "The number of rows for gamma: "<< gamma.size() << endl;
     //cout << "The number of rows for output: "<< output[0].size() << endl;
@@ -78,12 +78,11 @@ vector<vector<vector<float>>> BatchNorm::forward(const std::vector<std::vector<s
     calculate_batch_var();
     calculate_norm_input();
     calculate_output();
+    
     return output;
 }
 // Need to create an actual implementation of the backward method
-vector<vector<vector<float>>> BatchNorm::backward(const std::vector<std::vector<std::vector<float>>> & gradient_from_next_layer){
-    
-    d_input.resize(depthSize, vector<vector<float>>(rowSize, vector<float>(colSize, 0.0f)));
+vector<vector<float>> BatchNorm::backward(const std::vector<std::vector<float>> & gradient_from_next_layer){
     
     calculate_batch_d_beta(gradient_from_next_layer);
     
@@ -96,130 +95,111 @@ vector<vector<vector<float>>> BatchNorm::backward(const std::vector<std::vector<
     
 }
 
-void BatchNorm::calculate_batch_d_beta(const std::vector<std::vector<std::vector<float>>> & gradient_from_next_layer){
-    if(rowSize != gradient_from_next_layer[0].size()){
+void BatchNorm::calculate_batch_d_beta(const std::vector<std::vector<float>> & gradient_from_next_layer){
+    if(num_features != gradient_from_next_layer[0].size()){
         cerr << "ERROR: The number of rows in the BatchNorm object is not the same to input_tensor!" << endl;
         return;
     }
+    d_beta.resize(num_features, 0.0f);
     
-    vector<vector<float>> sum_matrix(rowSize, vector<float>(colSize, 0));
-    for(int depth{0}; depth < depthSize; depth++){
-        sum_matrix = add_trasposed_vectors(sum_matrix, gradient_from_next_layer[depth]);
+    
+    for(size_t row{0}; row < batch_size; row++ ){
+        for(size_t col{0}; col < num_features; col++){
+            d_beta[col] += gradient_from_next_layer[row][col];
+        }
     }
-    d_beta = sum_matrix;
-    
 }
 
-void BatchNorm::calculate_batch_d_gamma(const std::vector<std::vector<std::vector<float>>> & gradient_from_next_layer){
-     if(rowSize != gradient_from_next_layer[0].size()){
+void BatchNorm::calculate_batch_d_gamma(const std::vector<std::vector<float>> & gradient_from_next_layer){
+     if(num_features != gradient_from_next_layer[0].size()){
         cerr << "ERROR: The number of rows in the BatchNorm object is not the same to input_tensor!" << endl;
         return;
     }
-    vector<vector<float>> temp_result(rowSize, vector<float>(colSize, 0));
-    vector<vector<float>> sum(rowSize, vector<float>(colSize, 0));
-    for(int depth{0}; depth < depthSize; depth++){
-       temp_result = element_wise_multiplication(gradient_from_next_layer[depth], normalized_input[depth]);
+    d_gamma.resize(num_features, 0.0f);
+    dLRespectdNormX.resize(batch_size, vector<float>(num_features, 0.0f));
+    
+   
+    
+    for(size_t row{0}; row < batch_size; row++){
+        for(size_t col{0}; col < num_features; col++){
+            float grad = gradient_from_next_layer[row][col];
+            d_gamma[col] += grad * normalized_input[row][col];
+            
+            dLRespectdNormX[row][col] = grad * gamma[col];
+        }
         
-        sum = add_trasposed_vectors(temp_result, sum);
     }
-    d_gamma = sum;
     
 }
 
-void BatchNorm::calculate_mean_correction(vector<vector<vector<float>>> & mean_correction){
+void BatchNorm::calculate_mean_correction(vector<float> & mean_correction){
     // sums up the values across all of the batches in the gradient from the next layer
-    vector<vector<float>> sum(gamma.size(), vector<float>(1, 0));
-    for(int depth{0}; depth < input.size(); depth++){
-        sum = add_trasposed_vectors(dLRespectdNormX[depth],sum);
+    vector<float> sum_dL_dNormX(num_features, 0.0f);
+    
+    for(size_t row{0}; row < batch_size; row++){
+        for(size_t col{0}; col < num_features; col++){
+            sum_dL_dNormX[col] += dLRespectdNormX[row][col];
+        }
     }
     // multiplies the mean_correction matrix with 1/batch_size
-    for(int row{0}; row <rowSize; row++){
-       sum[row][0] *=  (double) 1/depthSize;
+    for(size_t col{0}; col < num_features; col++){
+        float std_inv = 1.0f / pow(batch_vars[col] + epsilon, 0.5);
+        mean_correction[col] = sum_dL_dNormX[col] * (-std_inv);
     }
     
-    for(int depth{0}; depth < depthSize; depth++){
-        mean_correction[depth] = sum;
-    }
+    
     
 }
 
-void BatchNorm::calculate_var_correction(vector<vector<vector<float>>> & var_correction){
-    /*
-    vector<vector<vector<float>>> mean_correction(
-            input.size(),vector<vector<float>>(gamma.size(),vector<float>(1, 0)));
-    */
-    vector<vector<float>> sum(rowSize, vector<float>(colSize, 0));
-    for(int depth{0}; depth < depthSize; depth++){
-        vector<vector<float>> temp_result = element_wise_multiplication( dLRespectdNormX[depth], normalized_input[depth]);
-        
-        sum = add_trasposed_vectors(sum, temp_result);
+void BatchNorm::calculate_var_correction(vector<float> & var_correction){
+   
+    var_correction.resize(num_features, 0.0f);
+    
+    for(size_t col{0}; col < num_features; col++){
+        float sum_term = 0.0f;
+        for(size_t row{0}; row < batch_size; row++){
+            sum_term += dLRespectdNormX[row][col] * (input[row][col] - batch_means[col]);
+        }
+        float std_dev = pow(batch_vars[col] + epsilon, 0.5);
+        var_correction[col] = sum_term * -0.5f * pow(std_dev, -3.0f);
     }
-    // multiplies the mean_correction matrix with 1/batch_size
-    for(int row{0}; row < rowSize; row++){
-        sum[row][0] *= (double) 1/depthSize;
-    }
-    for(int depth{0}; depth < depthSize; depth++){
-        var_correction[depth] = sum;
-        var_correction[depth] = element_wise_multiplication(normalized_input[depth], var_correction[depth]);
-    }
-       
+    
     
 }
 
 
-void BatchNorm::calculate_d_input(const std::vector<std::vector<std::vector<float>>> & gradient_from_next_layer){
+void BatchNorm::calculate_d_input(const std::vector<std::vector<float>> & gradient_from_next_layer){
+    d_input.resize(batch_size, vector<float>(num_features));
     
-
-    dLRespectdNormX.resize(input.size(), vector<vector<float>>(rowSize, vector<float>(colSize, 0)));
-    // calculate the resulting normalized input gradient that will be necessary to calculate the mean and variance correction term
-    for(int depth{0}; depth < depthSize; depth++){
-        dLRespectdNormX[depth] = element_wise_multiplication(gradient_from_next_layer[depth], gamma);
-    }
+    // We need dVar and dMean to combine into dInput
+    vector<float> dL_dVar(num_features);
+    vector<float> dL_dMean(num_features);
     
-    vector<vector<float>> dL_dmu(rowSize, vector<float>(1,0.0f));
-    vector<vector<float>> dL_dvar(rowSize, vector<float>(1,0.0f));
+    calculate_var_correction(dL_dVar);
     
-    vector<vector<float>> total_sum_dL_dNormX(rowSize, vector<float>(1, 0.0f));
-    vector<vector<float>> total_sum_dL_dNormX_times_x_minus_mu(rowSize, vector<float>(1, 0.0f));
+    // For dInput calculation, we need the dMu term that includes the dVar influence
+    // dL/dx = dL/dx_hat * (1/sigma) + dL/dVar * (2*(x-mu)/N) + dL/dMu * (1/N)
     
-    for(int row{0}; row < rowSize; row++){
-        
+    for(size_t col{0}; col < num_features; col++){
         float sum_dL_dNormX = 0.0f;
-        float sum_dL_dNormX_times_x_minus_mu = 0.0f;
-        
-        
-        float mean = batch_means[row][0];
-        float var = batch_vars[row][0];
-        
-        for(int depth{0}; depth < depthSize; depth++){
-            float dL_dNormX = dLRespectdNormX[depth][row][0];
-            float x_minus_mu = input[depth][row][0] - mean;
-            
-            sum_dL_dNormX += dL_dNormX;
-            sum_dL_dNormX_times_x_minus_mu += dL_dNormX * x_minus_mu;
+        for(size_t row{0}; row < batch_size; row++){
+            sum_dL_dNormX += dLRespectdNormX[row][col];
         }
-        total_sum_dL_dNormX[row][0] = sum_dL_dNormX;
-        total_sum_dL_dNormX_times_x_minus_mu[row][0] = sum_dL_dNormX_times_x_minus_mu;
-    }
-    
-    d_input.resize(input.size(), vector<vector<float>>(rowSize, vector<float>(colSize, 0)));
-    for(int depth{0}; depth < depthSize; depth++){
-        for(int row{0}; row < rowSize; row++){
+        
+        float std_inv = 1.0f / pow(batch_vars[col] + epsilon, 0.5);
+        
+        for(size_t row{0}; row < batch_size; row++){
+            float x_minus_mu = input[row][col] - batch_means[col];
             
-            float dL_dNormX = dLRespectdNormX[depth][row][0];
-            float mean = batch_means[row][0];
-            float var = batch_vars[row][0];
-            float inv_std_dev = 1.0f / pow(var + epsilon, 0.5);
+            float term1 = dLRespectdNormX[row][col] * std_inv;
             
-            float current_sum_dL_dNormX = total_sum_dL_dNormX[row][0];
-            float current_sum_dL_dNormX_times_x_minus_mu = total_sum_dL_dNormX_times_x_minus_mu[row][0];
+            float term2 = dL_dVar[col] * (2.0f * x_minus_mu / batch_size);
             
-            float mean_corr = current_sum_dL_dNormX / (float) depthSize;
+            float term3 = (sum_dL_dNormX * -std_inv) / batch_size;
             
-            float var_corr = (input[depth][row][0] - mean) / (var + epsilon) * (current_sum_dL_dNormX_times_x_minus_mu / (float) depthSize);
-            
-            d_input[depth][row][0] = inv_std_dev * (dL_dNormX - mean_corr - var_corr);
+            d_input[row][col] = term1 + term2 + term3;
         }
+        
     }
 }
 
@@ -233,23 +213,30 @@ void BatchNorm::update(float learning_rate,string OptimizationAlgorithm){
         
         t++;
         
-        for(int row{0}; row < rowSize; row++){
-            m_gamma[row][0] = beta1* m_gamma[row][0] + (1-beta1) * d_gamma[row][0];
-            v_gamma[row][0] = beta2* v_gamma[row][0] + (1-beta2) * pow(d_gamma[row][0], 2);
+        for(int col{0}; col < num_features; col++){
+            m_gamma[col] = beta1* m_gamma[col] + (1-beta1) * d_gamma[col];
+            v_gamma[col] = beta2* v_gamma[col] + (1-beta2) * pow(d_gamma[col], 2);
             
-            mVector = m_gamma[row][0] / (1 - pow(beta1, t));
-            vVector = v_gamma[row][0] / (1 - pow(beta2, t));
+            mVector = m_gamma[col] / (1 - pow(beta1, t));
+            vVector = v_gamma[col] / (1 - pow(beta2, t));
             
-            gamma[row][0] = gamma[row][0] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
+            gamma[col] = gamma[col] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
             
-            m_beta[row][0] = beta1* m_beta[row][0] + (1-beta1) * d_beta[row][0];
-            v_beta[row][0] = beta2* v_beta[row][0] + (1-beta2) * pow(d_beta[row][0], 2);
+            m_beta[col] = beta1* m_beta[col] + (1-beta1) * d_beta[col];
+            v_beta[col] = beta2* v_beta[col] + (1-beta2) * pow(d_beta[col], 2);
             
-            mVector = m_beta[row][0] / (1 - pow(beta1, t));
-            vVector = v_beta[row][0] / (1 - pow(beta2, t));
+            mVector = m_beta[col] / (1 - pow(beta1, t));
+            vVector = v_beta[col] / (1 - pow(beta2, t));
             
-            beta[row][0] = beta[row][0] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
+            beta[col] = beta[col] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
         }
+    }
+    else {
+            // SGD
+            for (size_t j = 0; j < num_features; ++j) {
+                gamma[j] -= learning_rate * d_gamma[j];
+                beta[j]  -= learning_rate * d_beta[j];
+            }
     }
 }
 
@@ -261,21 +248,18 @@ void BatchNorm::save_to_file(ofstream& file){
     
     file << "BATCHNORM\n";
     
-    file << gamma.size() << " " << gamma[0].size() << "\n";
+    file << num_features << "\n";
     
-    for(const auto& row : gamma){
-        for(float val : row){
-            file << val << " ";
-        }
+    for(float val : gamma){
+        file << val << " ";
+    
     }
     file << "\n";
     
-    file << beta.size() << " " << beta[0].size() << "\n";
+    file << num_features<< "\n";
     
-    for(const auto& row : beta){
-        for(float val : row){
-            file << val << " ";
-        }
+    for(float val : beta){
+        file << val << " ";
     }
     file << "\n";
 }
@@ -287,7 +271,7 @@ void BatchNorm::load_layer(std::ifstream& file){
     }
     
     string name;
-    int rows, cols;
+    int size;
     
     file >> name;
     if(name != "BATCHNORM"){
@@ -295,27 +279,21 @@ void BatchNorm::load_layer(std::ifstream& file){
         return;
     }
     
-    file >> rows >> cols;
-    cout << "Number of rows:" << rows << endl;
-    cout << "Number of cols:" << cols << endl;
-    gamma.resize(rows);
-    for(int row{0}; row < rows; row++){
-        gamma[row].resize(cols);
-        
-        for (int col{0}; col < cols; col++) {
-            file >> gamma[row][col];
-        }
+    file >> size;
+    gamma.resize(size);
+    num_features = size;
+    for(int row{0}; row < size; row++){
+        file >> gamma[row];
     }
     
-    file >> rows >> cols;
-    beta.resize(rows);
-    for(int row{0}; row < rows; row++){
-      beta[row].resize(cols);
-        
-        for (int col{0}; col < cols; col++) {
-            file >> beta[row][col];
-        }
+    file >> size;
+    beta.resize(size);
+    for(int row{0}; row < size; row++){
+        file >> beta[row];
     }
-
+    
+    d_gamma.resize(size, 0.0f); d_beta.resize(size, 0.0f);
+    m_gamma.resize(size, 0.0f); v_gamma.resize(size, 0.0f);
+    m_beta.resize(size, 0.0f); v_beta.resize(size, 0.0f);
     
 }

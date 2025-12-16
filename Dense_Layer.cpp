@@ -2,91 +2,48 @@
 #include "Dense_Layer.hpp"
 #include <iostream>
 
-// sets the random weights using the he initialization
-vector<vector<float>> Dense_Layer::he_init_weights(){
-    vector<vector<float>> weights(row, vector<float>(col, 0));
-    // creates a standart deviation for the normal distribution to create random weights
-    double stddev = sqrt(2.0 / (double)col);
-    
+void Dense_Layer::he_init(){
     random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<> d(0.0, stddev);
-    
-    for(int row{0}; row < weights.size(); row++){
-        for(int col{0}; col < weights[0].size(); col++){
-            weights[row][col] = d(gen);
+        mt19937 gen(rd());
+        double stddev = sqrt(2.0 / (double)input_features);
+        normal_distribution<> d(0.0, stddev);
+
+        for(int i = 0; i < input_features; ++i) {
+            for(int j = 0; j < output_features; ++j) {
+                weights[i][j] = d(gen);
+            }
         }
-    }
-    return weights;
-}
-
-// sets the random biases using the he initialization
-vector<vector<float>> Dense_Layer::he_init_biases(){
-    vector<vector<float>> biases(row, vector<float>(1, 0));
-    double stddev = sqrt(2.0 / (double) col);
-    
-    random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<> d(0.0, stddev);
-    
-    for(int row{0}; row < biases.size(); row++){
-        for(int col{0}; col < biases[0].size(); col++){
-            biases[row][col] = d(gen);
-        }
-    }
-    return biases;
-}
-
-void Dense_Layer::set_inputs(vector<vector<vector<float>>>inputs){
-    this->input = inputs;
-}
-
-void Dense_Layer::set_weights(vector<vector<float>> weights){
-    this->weights = weights;
-}
-
-void Dense_Layer::set_biases(vector<vector<float>> biases){
-    this->biases = biases;
+        // Biases initialized to 0 usually, or small constant
+        fill(biases.begin(), biases.end(), 0.0f);
 }
 
 
-
-vector<vector<float>> Dense_Layer::get_weights() const {
-    return weights;
-}
-
-vector<vector<float>> Dense_Layer::get_biases() const {
-    return biases;
-}
-
-vector<vector<vector<float>>> Dense_Layer::get_prediction() const{
-    vector<vector<vector<float>>> output;
-    for(int depth{0}; depth < input.size(); depth++){
-        output.push_back(add_trasposed_vectors(multiply(weights, input[depth]), biases));
-    }
-    return output;
-}
-
-vector<vector<vector<float>>> Dense_Layer::getInput(){
-    return input;
-}
 // there is an error where the gradient from the next layer does not change and stays the same initial gradient
-vector<vector<vector<float>>> Dense_Layer::backward(const vector<vector<vector<float>>> & gradient_from_next_layer){
+vector<vector<float>> Dense_Layer::backward(const vector<vector<float>> & gradient_from_next_layer){
     
+    vector<vector<float>> input_T = transpose(input);
+    
+    d_weights = multiply(input_T, gradient_from_next_layer);
+    
+    d_biases = sum_dim0(gradient_from_next_layer);
+    
+    vector<vector<float>> weights_T = transpose(weights);
+    return multiply(gradient_from_next_layer, weights_T);
+     /*
     vector<vector<vector<float>>>batch_d_weights(input.size(),vector<vector<float>>(d_weights.size(),vector<float>(d_weights[0].size(), 0)));
     
-    vector<vector<vector<float>>> batch_d_biases(input.size(), vector<vector<float>>(d_biases.size(),vector<float>(1, 0)));
-    vector<vector<vector<float>>> gradient_for_prev_layer = gradient_from_next_layer;
+    vector<vector<float>> batch_d_biases(input.size(), vector<float>(d_biases.size(), 0));
+    vector<vector<float>> gradient_for_prev_layer = gradient_from_next_layer;
    
-    for(int depth{0}; depth < input.size(); depth++){
-        vector<vector<float>> transposed_input = transpose(input[depth]);
+    for(int row{0}; row < input.size(); row++){
+        vector<vector<float>> transposed_input = transpose(input[row]);
         // finds the gradient for weights knowing the transposed values from the next activation layer and multiplies with the gradient from the next layer. Important to remember that transposed_input is a n*1 matrix and gradient from next layer is also a n*1 matrix, because my multiply methods can only use a n*1 vector as a first parameter and a 2d  matrix as a second one. If not used carefully, this could lead to errors
-        batch_d_weights[depth] = multiply(gradient_from_next_layer[depth], transposed_input);
+        batch_d_weights[row] = multiply(transposed_input, gradient_from_next_layer);
         // creates a new gradient for the previous layer
         // creates a copy of weights and transposes it
         vector<vector<float>> transposed_weights = transpose(weights);
         // finds the gradient for the previous layer using a n*1 gradient matric and a 2D transposed weight matrix
-        gradient_for_prev_layer[depth] = multiply(transposed_weights, gradient_from_next_layer[depth]);
+        gradient_for_prev_layer = multiply(transposed_weights, gradient_from_next_layer);
     }
     batch_d_biases = gradient_from_next_layer;
    
@@ -103,17 +60,17 @@ vector<vector<vector<float>>> Dense_Layer::backward(const vector<vector<vector<f
     }
     
     for(int row{0}; row < batch_d_biases[0].size(); row++){
-        for(int col{0}; col < batch_d_biases[0][0].size(); col++){
             sum = 0.0;
             for(int depth{0}; depth < batch_d_biases.size(); depth++){
-                sum += batch_d_biases[depth][row][col];
+                sum += batch_d_biases[depth][row][0];
             }
-            d_biases[row][col] = sum / (double) batch_d_biases.size();
+            d_biases[row] = sum / (double) batch_d_biases.size();
         }
         
-    }
+    
     
     return gradient_for_prev_layer;
+    */
 }
 
 void Dense_Layer::SGD(float learning_rate){
@@ -124,12 +81,22 @@ void Dense_Layer::SGD(float learning_rate){
         }
     }
     for(int row{0}; row < biases.size(); row++){
-        biases[row][0] = biases[row][0] - learning_rate * d_biases[row][0];
+        biases[row] = biases[row] - learning_rate * d_biases[row];
     }
 }
 
 // this method updates the values of weights and biases for each dense layer
 void Dense_Layer::update(float learning_rate,string OptimizationAlgorithm){
+    
+    if(d_weights.size() != weights.size() || d_weights[0].size() != weights[0].size()) {
+            cerr << "ERROR: d_weights dimensions mismatch in update(). Skipping update." << endl;
+            return;
+        }
+        if(d_biases.size() != biases.size()) {
+            cerr << "ERROR: d_biases dimensions mismatch in update(). Skipping update." << endl;
+            return;
+        }
+    
     if(OptimizationAlgorithm == "ADAM"){
         static int t = 0;
         
@@ -157,13 +124,13 @@ void Dense_Layer::update(float learning_rate,string OptimizationAlgorithm){
         
         for(int row{0}; row < biases.size(); row++){
            
-            m_biases[row][0] = beta1* m_biases[row][0] + (1-beta1) * d_biases[row][0];
-            v_biases[row][0] = beta2* v_biases[row][0] + (1-beta2) * pow(d_biases[row][0], 2);
+            m_biases[row] = beta1* m_biases[row] + (1-beta1) * d_biases[row];
+            v_biases[row] = beta2* v_biases[row] + (1-beta2) * pow(d_biases[row], 2);
             
-            mVector = m_biases[row][0] / (1 - pow(beta1, t));
-            vVector = v_biases[row][0] / (1 - pow(beta2, t));
+            mVector = m_biases[row] / (1 - pow(beta1, t));
+            vVector = v_biases[row] / (1 - pow(beta2, t));
             
-           biases[row][0] = biases[row][0] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
+           biases[row] = biases[row] - (learning_rate / (epsilon + pow(vVector, 0.5))) * mVector;
         }
     }
     else if(OptimizationAlgorithm == "SGD"){
@@ -177,10 +144,16 @@ void Dense_Layer::update(float learning_rate,string OptimizationAlgorithm){
     
 }
 
-vector<vector<vector<float>>> Dense_Layer::forward(const  vector<vector<vector<float>>> & output_from_prev_layer){
-    batch_num = input.size();
-    input = output_from_prev_layer;
-    return get_prediction();
+vector<vector<float>> Dense_Layer::forward(const vector<vector<float>> & output_from_prev_layer){
+    this->input = output_from_prev_layer;
+    
+    // Matrix Multiply: [Batch x In] * [In x Out] = [Batch x Out]
+    vector<vector<float>> output = multiply(output_from_prev_layer, weights);
+    
+    output = add_bias_to_batch(output, biases);
+   
+    return output;
+
 }
 
 void Dense_Layer::save_to_file(ofstream& file){
@@ -192,7 +165,7 @@ void Dense_Layer::save_to_file(ofstream& file){
     
     file << "DENSE\n";
     
-    file << weights.size() << " " << weights[0].size() << "\n";
+    file << input_features << " " << output_features << "\n";
     
     for(const auto& row : weights){
         for(float val : row){
@@ -201,12 +174,10 @@ void Dense_Layer::save_to_file(ofstream& file){
     }
     file << "\n";
     
-    file << biases.size() << " " << biases[0].size() << "\n";
+    file << biases.size() << " " << 1 << "\n";
     
     for(const auto& row : biases){
-        for(float val : row){
-            file << val << " ";
-        }
+        file << row << " ";
     }
     file << "\n";
 }
@@ -242,17 +213,11 @@ void Dense_Layer::load_layer(ifstream& file){
     file >> rows >> cols;
     biases.resize(rows);
     for(int row{0}; row < rows; row++){
-      biases[row].resize(cols);
+       file >> biases[row];
         
-        for (int col{0}; col < cols; col++) {
-            file >> biases[row][col];
-        }
     }
 
     
 }
 
 
-int Dense_Layer::getRow(){
-    return row;
-}

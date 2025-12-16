@@ -31,11 +31,11 @@ public:
     
     vector<unique_ptr<Layer>> createModel(int input_size, int num, int finalNum, int k_factor);
     
-    void back_propagation(vector<vector<int>> one_hot_labels, float learning_rate, vector<vector<vector<float>>> output);
+    void back_propagation(vector<vector<int>> one_hot_labels, float learning_rate, vector<vector<float>>& output);
         
-    vector<vector<vector<float>>> forward_pass(vector<vector<vector<float>>> images);
+   vector<vector<float>> forward_pass(vector<vector<float>>& images);
         
-    pair<double, double> start_batch_training(vector<vector<vector<float>>> batch_images, vector<vector<int>>batch_one_hot_labels);
+    pair<double, double> start_batch_training(vector<vector<float>>& batch_images, vector<vector<int>>& batch_one_hot_labels);
        
     void start_training(MNISTData& train, int numberOfImages);
 

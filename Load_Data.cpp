@@ -76,8 +76,6 @@ MNISTData load_data(string filename){
         // checks if there are no missing pixels in the image
         if(current_image.size() == 784){
             data.images.push_back(current_image);
-        }
-        if(current_int_image.size() == 784){
             data.int_images.push_back(current_int_image);
         }
         else{
