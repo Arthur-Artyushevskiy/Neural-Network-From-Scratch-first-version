@@ -16,36 +16,45 @@ using namespace std;
 int main(int argc, const char * argv[]) {
     
     MNISTData test = load_data("mnist_test.csv");
-    //MNISTData train = load_data("mnist_train.csv");
+    MNISTData train = load_data("mnist_train.csv");
     int input_layer_size = 784;
     int first_dense_layer_size = 64;
     int output_layer_size = 10;
-    int k_factor_ReLu = 0.01;
+    double k_factor_ReLu = 0.01;
     string optimization_algorithm = "ADAM";
     size_t training_size = test.images.size();
-    bool autoCreate = 1;
+    bool autoCreate = false;
+    vector<float> learning_rates = {0.001};
     
-    NeuralNetwork model = NeuralNetwork(input_layer_size, first_dense_layer_size, output_layer_size, k_factor_ReLu, optimization_algorithm, autoCreate);
-    //model.start_training(train, training_size);
+    NeuralNetwork model = NeuralNetwork(input_layer_size, first_dense_layer_size, output_layer_size, k_factor_ReLu, optimization_algorithm, autoCreate, learning_rates);
     /*
+    model.addDense(input_layer_size, first_dense_layer_size);
+    model.addBatchNorm(first_dense_layer_size);
+    model.addActivation("leak_relu");
+    model.addDense(first_dense_layer_size, 10);
+    model.addActivation("softmax");
+    */
+    
+    
     model.addDense(input_layer_size, first_dense_layer_size);
     model.addBatchNorm(first_dense_layer_size);
     model.addActivation("leak_relu");
     model.addDense(first_dense_layer_size, 32);
     model.addBatchNorm(32);
     model.addActivation("leak_relu");
-    model.addDense(32, 16);
-    model.addBatchNorm(16);
-    model.addActivation("leak_relu");
-    model.addDense(16, 10);
+    model.addDense(32, output_layer_size);
+    //model.addBatchNorm(16);
+    //model.addActivation("leak_relu");
+    //model.addDense(16, 10);
     model.addActivation("leak_relu");
     
-    model.start_training(train, 2048);
-    */
-   
+    model.start_training(train, test, training_size);
     
-    ifstream load("saved_parameters_experiment.txt");
-    model.load_model(load);
+    
+    
+    
+    //ifstream load("saved_parameters_experiment.txt");
+    //model.load_model(load);
     /*
     vector<vector<vector<float>>> batch_images;
     for(int ind{0}; ind < 32; ind++){
@@ -60,8 +69,8 @@ int main(int argc, const char * argv[]) {
     }
     */
     
-    double accuracy = model.evaluate_model(test, 32);
-    cout << "The overall accuracy of the model is: " << accuracy << "%" << endl;
+    //double accuracy = model.evaluate_model(test, 64);
+    //cout << " The overall accuracy of the model is: " << accuracy << "%" << endl;
     
         
     return EXIT_SUCCESS;

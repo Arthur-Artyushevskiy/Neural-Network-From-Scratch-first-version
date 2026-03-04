@@ -1,5 +1,3 @@
-//
-
 
 #ifndef Load_Data_hpp
 #define Load_Data_hpp

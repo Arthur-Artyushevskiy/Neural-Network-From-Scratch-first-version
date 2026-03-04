@@ -19,15 +19,15 @@ void Dense_Layer::he_init(){
 
 
 // there is an error where the gradient from the next layer does not change and stays the same initial gradient
-vector<vector<float>> Dense_Layer::backward(const vector<vector<float>> & gradient_from_next_layer){
+matrix_f Dense_Layer::backward(const matrix_f& gradient_from_next_layer){
     
-    vector<vector<float>> input_T = transpose(input);
+    matrix_f input_T = transpose(input);
     
     d_weights = multiply(input_T, gradient_from_next_layer);
     
     d_biases = sum_dim0(gradient_from_next_layer);
     
-    vector<vector<float>> weights_T = transpose(weights);
+    matrix_f weights_T = transpose(weights);
     return multiply(gradient_from_next_layer, weights_T);
 }
 
@@ -102,11 +102,11 @@ void Dense_Layer::update(float learning_rate,string OptimizationAlgorithm){
     
 }
 
-vector<vector<float>> Dense_Layer::forward(const vector<vector<float>> & output_from_prev_layer){
+matrix_f Dense_Layer::forward(const matrix_f& output_from_prev_layer){
     this->input = output_from_prev_layer;
     
     // Matrix Multiply: [Batch x In] * [In x Out] = [Batch x Out]
-    vector<vector<float>> output = multiply(output_from_prev_layer, weights);
+    matrix_f output = multiply(output_from_prev_layer, weights);
     
     output = add_bias_to_batch(output, biases);
    

@@ -14,10 +14,12 @@ float mean_square_error(vector<float> prediction, vector<float> desired){
 float categorical_cross_softmax(vector<float> prediction, vector<int> one_hot_label){
     float error = 0.00;
     int label{};
+    float max_val{0.0f};
     const float epsilon = 1e-9f;
-    for(int row{0}; row < one_hot_label.size(); row++){
-        if(one_hot_label[row] != 0){
+    for(int row{0}; row < prediction.size(); row++){
+        if(prediction[row] > max_val){
             label = row;
+            max_val = prediction[row];
             break;
         }
     }

@@ -47,7 +47,7 @@ void NeuralNetwork::addActivation(string activation_function){
 }
 
 // A method that allows to train the model
-void  NeuralNetwork::back_propagation(vector<vector<int>> one_hot_labels, float learning_rate, vector<vector<float>>& output){
+void  NeuralNetwork::back_propagation(vector<vector<int>> one_hot_labels, vector<vector<float>>& output){
     size_t batch_size= output.size();
         // takes the prediction after going through the softmax function
     vector<vector<float>> prediction = output;
@@ -64,7 +64,7 @@ void  NeuralNetwork::back_propagation(vector<vector<int>> one_hot_labels, float 
     
     // updates the parameters
     for(size_t i{0}; i < model.size(); i++){
-        model[i]->update(learning_rate, OptimizationAlgorithm);
+        model[i]->update(current_learning_rate, OptimizationAlgorithm);
     }
 }
 
@@ -101,20 +101,24 @@ pair<double, double>  NeuralNetwork::start_batch_training (vector<vector<float>>
 
     }
     
-    back_propagation(batch_one_hot_labels, 0.001, output);
+    back_propagation(batch_one_hot_labels, output);
     
     // FIX: Return TOTALS, not averages
     return {total_loss, (double)correct_prediction};
 }
 
-void NeuralNetwork::start_training(MNISTData& train, int numberOfImages){
+void NeuralNetwork::start_training(MNISTData& train, MNISTData& test, int numberOfImages){
     vector<vector<float>> batch_images;
     vector<vector<int>>batch_one_hot_labels;
     pair<double, double> performance;
     double total_loss{0.0};
     double total_accuracy{0.0};
     string progress_bpar;
-    int batch_limit = numberOfImages; // the final version should be equal to train.images.size()
+    float max_val_accuracy{0.0f};
+    int epoch_patiance{3}; // need to make this variable changable using an easier way
+    int patiance_param{0};
+    int learning_rate_ind{1};
+    int image_limit = numberOfImages; // the final version should be equal to train.images.size()
     cout << "WELCOME! This is my first neural network!" << endl;
  
     
@@ -136,47 +140,77 @@ void NeuralNetwork::start_training(MNISTData& train, int numberOfImages){
         int batch_count = 0;
         images_processed_in_epoch = 0;
         cout << "Epoch: " << epoch;
-        int total_batches = batch_limit / batch_size;
+        int total_batches = image_limit / batch_size;
         
         // Improved loop to handle batches correctly, even if not perfectly divisible
-        for(int batch_start = 0; batch_start < batch_limit; batch_start += batch_size){
+        for(int batch_start = 0; batch_start < image_limit; batch_start += batch_size){
             
-            cout << "\rProgress Bar: " << print_progress_bar(batch_count + 1, total_batches) << flush;
-            // this_thread::sleep_for(chrono::milliseconds(50)); // Optional sleep
+            if(batch_count % 25 == 0){
+                cout << "\rProgress Bar: " << print_progress_bar(batch_count + 1, total_batches) << flush;
+                // this_thread::sleep_for(chrono::milliseconds(50)); // Optional sleep
+            }
             
-            int batch_end = min(batch_start + batch_size, batch_limit);
-
+            int batch_end = min(batch_start + batch_size, image_limit);
+            
             for(int ind = batch_start; ind < batch_end; ind++){
-                 batch_images.push_back(train.images[ind]);
-                 batch_one_hot_labels.push_back(train.one_hot_labels[ind]);
+                batch_images.push_back(train.images[ind]);
+                batch_one_hot_labels.push_back(train.one_hot_labels[ind]);
             }
-
+            
             if (!batch_images.empty()) {
-                 performance = start_batch_training(batch_images, batch_one_hot_labels);
-                 total_loss += performance.first;
-                 total_accuracy += performance.second;
-                 images_processed_in_epoch += batch_images.size();
+                performance = start_batch_training(batch_images, batch_one_hot_labels);
+                total_loss += performance.first;
+                total_accuracy += performance.second;
+                images_processed_in_epoch += batch_images.size();
             }
-
+            
             batch_images.clear();
             batch_one_hot_labels.clear();
             batch_count++;
         }
         
         cout << endl;
+        
+        double val_accuracy = evaluate_model(test, batch_size);
         // FIX: Calculate final epoch stats correctly by dividing by total images processed
         if (images_processed_in_epoch > 0) {
-            cout << "Average Loss: " << total_loss / images_processed_in_epoch
-                 << ", Average Accuracy: " << (total_accuracy / images_processed_in_epoch) * 100.0 << "%" << endl;
+            cout << ", Training Loss: " << total_loss / images_processed_in_epoch;
+            cout<< ", Training Accuracy: " << (total_accuracy / images_processed_in_epoch) * 100.0 << "%";
+            cout << ", Validation Accuracy: " << val_accuracy << "%" << endl;
         } else {
             cout << "No images processed in this epoch." << endl;
         }
         cout << endl;
-    }
-    string save_parameters = "saved_parameters_experiment.txt";
-    ofstream save(save_parameters);
+        
+       
+        if(val_accuracy > max_val_accuracy){
+            max_val_accuracy = val_accuracy;
+            cout << "Saving the best current model"<< endl;
+            string save_parameters = "saved_parameters_experiment.txt";
+            ofstream save(save_parameters);
 
-    save_model(save);
+            save_model(save);
+        }
+        else if(val_accuracy < max_val_accuracy){
+            cout << "Patiance Parameter has been increased from " << patiance_param;
+            patiance_param++;
+            cout << " to " << patiance_param << endl;
+        }
+        
+        if(patiance_param == epoch_patiance){
+            if(learning_rate_ind < learning_rates.size()){
+                cout << learning_rates.size() << learning_rate_ind << endl;
+                cout << "The learning parameter has been changed from " << current_learning_rate;
+                this->current_learning_rate = learning_rates[learning_rate_ind];
+                cout << " to " << current_learning_rate << endl;
+                learning_rate_ind++;
+                patiance_param = 0;
+            }
+            else cout << "Index out of bound in your learning_rates list!" << endl;
+        }
+           
+    }
+    
 }
 
 
@@ -243,12 +277,12 @@ void  NeuralNetwork::load_model(ifstream& file){
     
 }
 
-double  NeuralNetwork::evaluate_model(MNISTData& train, int batch_size){
+double  NeuralNetwork::evaluate_model(MNISTData& test, int batch_size){
     cout << "Evaluation starts right now." << endl;
-    int correct_prediction = 0;
-    int size = train.images.size(); // Use actual size of training data passed
+    int correct_predictions = 0;
+    int size = test.images.size(); // Use actual size of training data passed
     if (size == 0) return 0.0;
-
+    float total_loss{0.0f};
    vector<vector<float>> batch_images;
     // vector<vector<int>> batch_one_hot_labels; // Not strictly needed if you just use train.one_hot_labels directly by index, but cleaner to keep consistent with training
     
@@ -256,7 +290,7 @@ double  NeuralNetwork::evaluate_model(MNISTData& train, int batch_size){
         int batch_end = min(batch_start + batch_size, size);
         
         for(int ind = batch_start; ind < batch_end; ind++){
-            batch_images.push_back(train.images[ind]);
+            batch_images.push_back(test.images[ind]);
             // batch_one_hot_labels.push_back(train.one_hot_labels[ind]);
         }
         
@@ -265,14 +299,18 @@ double  NeuralNetwork::evaluate_model(MNISTData& train, int batch_size){
         for(int depth{0}; depth < current_output.size(); depth++){
             int predicted_label = get_predicted_label(current_output[depth]);
             int true_label_index = batch_start + depth;
-            int true_label = get_true_label(train.one_hot_labels[true_label_index]);
+            int true_label = get_true_label(test.one_hot_labels[true_label_index]);
 
+            total_loss += categorical_cross_softmax(current_output[depth], test.one_hot_labels[depth]);
+            
             if(predicted_label == true_label){
-                correct_prediction++;
+                correct_predictions++;
             }
         }
+        
         batch_images.clear();
         // batch_one_hot_labels.clear();
     }
-    return ((double)correct_prediction / (double)size) * 100.0;
+    cout << "Validation Loss: " << total_loss / ((double) size);
+    return ((double)correct_predictions / (double)size) * 100.0;
 }

@@ -136,7 +136,7 @@ void shuffleImages(MNISTData& data){
     iota(indices.begin(), indices.end(), 0);
     
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-       std::mt19937 g(seed);
+    std::mt19937 g(seed);
     shuffle(indices.begin(), indices.end(), g);
     
     vector<vector<float>> shuffled_images = data.images;

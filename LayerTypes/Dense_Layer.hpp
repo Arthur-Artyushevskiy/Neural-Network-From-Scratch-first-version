@@ -4,32 +4,32 @@
 #include <stdio.h>
 #include "Matrix_Operations.hpp"
 #include "Layer.hpp"
+
+using matrix_f = std::vector<std::vector<float>>;
+using matrix_d = std::vector<std::vector<double>>;
 class Dense_Layer : public Layer{
 private:
     
     int input_features;
     int output_features;
     
-    vector<vector<float>> input; // [Batch_Size x Input_Features]
+    matrix_f input; // [Batch_Size x Input_Features]
     
-    vector<vector<float>> weights; // [Input_Features x Ouput_Features]
+    matrix_f weights; // [Input_Features x Ouput_Features]
     
     vector<float> biases; // the biases matrix R
     // A matrix for the weight gradient
-    vector<vector<float>> d_weights; // the gradient of weights R x C
+    matrix_f d_weights; // the gradient of weights R x C
     // A matrix for the bias gradient
     vector<float> d_biases; // the gradien of biases R
     
-    vector<vector<double>> m_weights,v_weights; // the mvector and vvector (used for ADAM) for weights R x C
+    matrix_d m_weights,v_weights; // the mvector and vvector (used for ADAM) for weights R x C
     
     vector<double> m_biases,v_biases; // the mvector and vvector (used for ADAM) for biases R x 1
     
 public:
    
-   Dense_Layer(int input_size, int output_size){
-        this->input_features = input_size;
-        this->output_features = output_size;
-        
+   Dense_Layer(int input_size, int output_size) : input_features(input_size), output_features(output_size){
         weights.resize(input_features, vector<float>(output_features));
         biases.resize(output_features, 0.0f);
         
@@ -45,9 +45,9 @@ public:
         he_init();
     }
    
-    vector<vector<float>> forward(const  vector<vector<float>> & output_from_prev_layer) override;
+    matrix_f forward(const  matrix_f& output_from_prev_layer) override;
     // One of the  most important functions that calculates the gradient and adjusts the weights and biases
-    vector<vector<float>> backward(const vector<vector<float>> & gradient_from_next_layer) override;
+    matrix_f backward(const matrix_f& gradient_from_next_layer) override;
    
     // updates the weights and biases using the hyperparameter
     void update(float learning_rate,string OptimizationAlgorithm) override;
@@ -66,7 +66,7 @@ public:
     
     
     // returns the prediction using input, weights, and biases matrix
-    vector<vector<float>> get_prediction() const;
+    matrix_f get_prediction() const;
     
 };
 #endif // !Dense_Layer_hpp

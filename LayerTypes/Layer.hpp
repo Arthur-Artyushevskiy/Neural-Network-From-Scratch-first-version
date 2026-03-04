@@ -1,9 +1,4 @@
-//
-//  Layer.hpp
-//  Neural Network
-//
-//  Created by Arthur on 05/10/25.
-//
+
 
 #ifndef Layer_hpp
 #define Layer_hpp
@@ -16,8 +11,6 @@ public:
     virtual ~Layer()= default;
     
     virtual vector<vector<float>> backward(const vector<vector<float>> & gradient_from_next_layer) = 0;
-    
-    
     
     virtual vector<vector<float>> forward(const vector<vector<float>> & output_from_prev_layer) = 0;
  
